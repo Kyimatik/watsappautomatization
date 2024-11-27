@@ -1,47 +1,81 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from urllib.parse import quote
 import time
 
+# Список номеров
+phone_numbers = ["+996550223324", "+324322", "+43242432"]  # Добавь свои номера сюда
+
 message = '''Привет , мы Адамар групп. Если тебе интересно чтобы мы помогли тебе с бесплатной консультацией , переходи пожалуйста по ссылке!
 Номер для связи - 777
 '''
-safe_message = quote(message)  # безопасный текст для URL
-
-phone_num = "+996550223324"
+safe_message = quote(message)  # Безопасный текст для URL
 
 # Функция для создания настроек Chrome
 def create_chrome_options():
     chrome_options = Options()
-    
-    # Добавляем параметры для Chrome
-    chrome_options.add_argument("--disable-extensions")  # Отключение расширений
-    chrome_options.add_argument("--disable-gpu")  # Отключение GPU ускорения
-    chrome_options.add_argument("--no-sandbox")  # Отключение песочницы (для Linux)
-    chrome_options.add_argument("--start-maximized")  # Открывать окно браузера на весь экран
-    chrome_options.add_argument("--disable-infobars")  # Отключение информационных панелей
-    chrome_options.add_argument("--disable-dev-shm-usage")  # Используется для улучшения производительности в Docker
-    chrome_options.add_argument("--keep-alive")  # Сохранение сессии (если нужно)
-    
-    return chrome_options   
-
-
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--disable-infobars")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    return chrome_options
 
 # Инициализация драйвера
 chrome_options = create_chrome_options()
-
-# Запуск Chrome с заданными параметрами
 driver = webdriver.Chrome(options=chrome_options)
 
+# Обработка номеров
+for phone_num in phone_numbers:
+    try:
+        # Открытие WhatsApp Web с номером и текстом
+        url = f"https://web.whatsapp.com/send?phone={phone_num}&text={safe_message}"
+        driver.get(url)
+        # Ждем загрузки страницы
+        WebDriverWait(driver, 90).until(
+            EC.presence_of_element_located(
+                (By.XPATH, "//span[@class='_ao3e' and text()='Темирлан Шеф']")
+            )
+        )
+        
+        # Проверка на недействительный номер
+        try:
+
+            invalid_message = driver.find_element(By.CLASS_NAME, "x12lqup9.x1o1kx08")
+            if "Номер телефона, отправленный по ссылке, недействительный" in invalid_message.text:
+                print(f"Номер {phone_num} недействительный. Нужно позвонить лично.")
+                continue  # Переходим к следующему номеру
+        except:
+            print(f"Номер {phone_num} действителен.")
+        
+        # Ожидание появления кнопки отправки сообщения
+        send_button = driver.find_element(By.XPATH, '//span[@data-icon="send"]')
+        send_button.click()  # Нажатие кнопки "Отправить"
+        print(f"Сообщение отправлено на номер {phone_num}.")
+        
+        time.sleep(5)  # Ждем отправки сообщения
+        
+        # Открытие новой вкладки
+        driver.execute_script("window.open('');")
+        driver.switch_to.window(driver.window_handles[-1])  # Переключение на новую вкладку
+        
+        # Закрытие предыдущей вкладки
+        driver.switch_to.window(driver.window_handles[0])
+        driver.close()
+        driver.switch_to.window(driver.window_handles[-1])
+    
+    except Exception as e:
+        print(f"Произошла ошибка с номером {phone_num}: {e}")
 
 
-# Открытие WhatsApp Web с номером и текстом
-url = f"https://web.whatsapp.com/send?phone={phone_num}&text={safe_message}"
-driver.get(url)
-
-time.sleep(100000000)
+time.sleep(10000000000) # миллиард лет ждемсс 
+# Завершаем работу драйвера
+driver.quit()
 
 
 # Пусть пока решение чтобы не закрывалось окно было time.sleep(10000) , таска на завтра приехать , сделать чтобы он закрывал лучше первый wats и каждый раз перезаходил 
