@@ -29,6 +29,23 @@ def create_chrome_options():
 # Инициализация драйвера
 chrome_options = create_chrome_options()
 driver = webdriver.Chrome(options=chrome_options)
+phone_num = "+996550223324"
+
+
+driver.get("https://web.whatsapp.com")
+
+# Проверяем вход в WhatsApp Web
+try:
+    print("Проверяем вход в WhatsApp Web...")
+    # Ждем появления заголовка "Скачайте WhatsApp для Windows"
+    WebDriverWait(driver, 25).until(
+        EC.presence_of_element_located((By.XPATH, '//h1[@class="_al_e" and text()="Скачайте WhatsApp для Windows"]'))
+    )
+    print("Вход в WhatsApp Web выполнен. Начинаем рассылку.")
+except:
+    print("Не удалось подтвердить вход. Убедитесь, что вы вошли через QR-код.")
+    driver.quit()
+    exit()
 
 # Обработка номеров
 for phone_num in phone_numbers:
@@ -36,12 +53,14 @@ for phone_num in phone_numbers:
         # Открытие WhatsApp Web с номером и текстом
         url = f"https://web.whatsapp.com/send?phone={phone_num}&text={safe_message}"
         driver.get(url)
-        # Ждем загрузки страницы
-        WebDriverWait(driver, 90).until(
-            EC.presence_of_element_located(
-                (By.XPATH, "//span[@class='_ao3e' and text()='Темирлан Шеф']")
+        # Проверяем, загрузился ли интерфейс для отправки сообщения
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//span[@data-icon="send"]'))
             )
-        )
+        except:
+            print(f"Сообщение для номера {phone_num} не готово. Возможно, проблема с номером.")
+            continue
         
         # Проверка на недействительный номер
         try:
@@ -73,7 +92,6 @@ for phone_num in phone_numbers:
         print(f"Произошла ошибка с номером {phone_num}: {e}")
 
 
-time.sleep(10000000000) # миллиард лет ждемсс 
 # Завершаем работу драйвера
 driver.quit()
 
